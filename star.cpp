@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <tuple>
 #include <cctype>
+#include <map>
+#include <set>
+#include <sstream>
 
 using namespace std;
 
@@ -14,8 +17,94 @@ std::ostream& operator<<(std::ostream& os, const std::tuple<T1, T2, T3>& tpl) {
     return os;
 }
 
+void backtrackAll(const vector<vector<int>>& score, const string& seq1, const string& seq2, int i, int j, string align1, string align2, set<tuple<string, string>>& alignments) {
+    if (i == 0 && j == 0) 
+    {
+        alignments.insert(make_tuple(align1, align2));
+        return;
+    }
 
-// Función para procesar el archivo y obtener las secuencias
+    if (i > 0 && j > 0) 
+    {
+        int scoreDiagonal = seq1[i - 1] == seq2[j - 1] ? 1 : -1;
+        if (score[i][j] == score[i - 1][j - 1] + scoreDiagonal) 
+        {
+            backtrackAll(score, seq1, seq2, i - 1, j - 1, seq1[i - 1] + align1, seq2[j - 1] + align2, alignments);
+        }
+    }
+
+    if (i > 0) 
+    {
+        if (score[i][j] == score[i - 1][j] - 2) 
+        {
+            backtrackAll(score, seq1, seq2, i - 1, j, seq1[i - 1] + align1, "-" + align2, alignments);
+        }
+    }
+
+    if (j > 0) 
+    {
+        if (score[i][j] == score[i][j - 1] - 2) 
+        {
+            backtrackAll(score, seq1, seq2, i, j - 1, "-" + align1, seq2[j - 1] + align2, alignments);
+        }
+    }
+}
+
+tuple<string, string> needlemanWunschAll(const string& seq1, const string& seq2) {
+    int m = seq1.size();
+    int n = seq2.size();
+
+    vector<vector<int>> score(m + 1, vector<int>(n + 1));
+
+    for (int i = 0; i <= m; ++i) score[i][0] = -2 * i;
+    for (int j = 0; j <= n; ++j) score[0][j] = -2 * j;
+
+    for (int i = 1; i <= m; ++i) 
+    {
+        for (int j = 1; j <= n; ++j) 
+        {
+            int match = score[i - 1][j - 1] + (seq1[i - 1] == seq2[j - 1] ? 1 : -1);
+            int del = score[i - 1][j] - 2;
+            int ins = score[i][j - 1] - 2;
+
+            score[i][j] = max({ match, del, ins });
+        }
+    }
+
+    int min = 10000;
+
+    string rpta;
+    set<tuple<string, string>> alignments;
+
+    backtrackAll(score, seq1, seq2, m, n, "", "", alignments);
+
+    for (auto it = alignments.begin(); it != alignments.end(); ++it) {
+        const auto& alignment = *it;
+        int aux = 0;
+        for (int x = 0; x < get<1>(alignment).length(); x++)
+        {
+            if (x + 1 < get<1>(alignment).length() && get<1>(alignment)[x + 1] != '-')
+            {
+                aux++;
+            }
+        }
+        if (min > aux)
+        {
+            rpta = get<1>(alignment);
+        }
+    }
+
+    string seq1_modificada = seq1;
+
+    for (int x = 0; x < rpta.length() - seq1.length(); x++)
+    {
+        seq1_modificada = seq1_modificada + "-";
+    }
+
+    return make_tuple(seq1_modificada, rpta);
+
+}
+
 void procesarSecuencias(const string& nombreArchivo, string& bacteria, string& sarsCov, string& influenza) {
     ifstream archivo(nombreArchivo);
     string linea;
@@ -46,8 +135,7 @@ void procesarSecuencias(const string& nombreArchivo, string& bacteria, string& s
     }
 }
 
-// Función para calcular el mejor alineamiento y el score utilizando DP
-tuple<string, string, int> needlemanWunsch(const string& seq1, const string& seq2) {
+tuple<string, string, int> needlemanWunsch(const string& seq1, const string& seq2, int flag) {
     int m = seq1.size();
     int n = seq2.size();
 
@@ -65,13 +153,13 @@ tuple<string, string, int> needlemanWunsch(const string& seq1, const string& seq
     }
 
     // Relleno de la matriz
-    for (int i = 1; i <= m; i++) 
+    for (int i = 1; i <= m; i++)
     {
-        for (int j = 1; j <= n; j++) 
+        for (int j = 1; j <= n; j++)
         {
             int match;
 
-            if (seq1[i - 1] == seq2[j - 1]) 
+            if (seq1[i - 1] == seq2[j - 1])
             {
                 match = score[i - 1][j - 1] + 1;
             }
@@ -91,7 +179,8 @@ tuple<string, string, int> needlemanWunsch(const string& seq1, const string& seq
 
     int i = m;
     int j = n;
-    while (i > 0 || j > 0) 
+    int cont = 0;
+    while (i > 0 || j > 0)
     {
         if (i > 0 && j > 0 && score[i][j] == score[i - 1][j - 1] + (seq1[i - 1] == seq2[j - 1] ? 1 : -1)) {
             align1 = seq1[i - 1] + align1;
@@ -107,67 +196,111 @@ tuple<string, string, int> needlemanWunsch(const string& seq1, const string& seq
             align1 = "-" + align1;
             align2 = seq2[j - 1] + align2;
             j--;
+            cont++;
         }
     }
-    return make_tuple(align1, align2, score[m][n]);
+
+    if (flag == 0)
+    {
+        return make_tuple(align1, align2, score[m][n]);
+    }
+    else
+    {
+        string rpta = seq1;
+        for (int x = 0; x < cont; x++)
+        {
+            rpta = rpta + "-";
+        }
+
+        return make_tuple(rpta, align2, score[m][n]);
+    }
+
 }
 
-
-
-void star(string secuencias[], int tamanho)
+void star(string secuencias[], int tamanho, int imprimir)
 {
-    int matriz[5][5];
-
-    for (int x = 0; x < 5; x++)
+    int** matriz;
+    matriz = new int* [tamanho];
+    for (int x = 0; x < tamanho; x++)
     {
-        for (int y = 0; y < 5; y++)
+        matriz[x] = new int[tamanho];
+    } 
+
+    for (int x = 0; x < tamanho; x++)
+    {
+        for (int y = 0; y < tamanho; y++)
         {
-            auto [s1, s2, score] = needlemanWunsch(secuencias[x], secuencias[y]);
+            auto [s1, s2, score] = needlemanWunsch(secuencias[x], secuencias[y],0);
             matriz[x][y] = (x == y ? -100 : score);
         }
     }
-    /* 
-    for (int x = 0; x < 5; x++)
+    
+    if (imprimir == 1)
     {
-        for (int y = 0; y < 5; y++)
+        for (int x = 0; x < tamanho; x++)
         {
-            cout << matriz[x][y] << "\t";
+            for (int y = 0; y < tamanho; y++)
+            {
+                cout << matriz[x][y] << "\t";
+            }
+            cout << endl;
+        }
+    }
+    else
+    {
+        int maximo = -100;
+        int indice_maximo;
+
+        for (int x = 0; x < tamanho; x++)
+        {
+            int suma = 0;
+            for (int y = 0; y < tamanho; y++)
+            {
+                suma = suma + (x == y ? 0 : matriz[x][y]);
+            }
+            if (maximo < suma)
+            {
+                maximo = suma;
+                indice_maximo = x;
+            }
+
+        }
+        cout << "Score maximo es: "<<maximo << endl;
+        cout << "El indice de la cadena con el score mayor es: "<<indice_maximo << endl;
+        cout << "Imprimiendo los alineamientos: " << endl;
+
+        int longitud_maxima = secuencias[indice_maximo].length();
+        vector<string> alineamientos_finales;
+        alineamientos_finales.push_back(secuencias[indice_maximo]);
+
+        for (int x = 0; x < tamanho; x++)
+        {
+            if (x != indice_maximo)
+            {
+                auto [s1, s2] = needlemanWunschAll(secuencias[indice_maximo], secuencias[x]);
+                if (longitud_maxima < s2.length())
+                {
+                    longitud_maxima = s2.length();
+                }
+                alineamientos_finales.push_back(s2);
+            }  
+        }
+
+        for (auto it = alineamientos_finales.begin(); it != alineamientos_finales.end(); ++it)
+        {
+            string aux = *it;
+            while (aux.length() < longitud_maxima)
+            {
+                aux = aux + "-";
+            }
+            cout << "Alignment " << aux << endl;
         }
         cout << endl;
     }
-    */
-
-
-    int maximo = -100;
-    int indice_maximo;
-    
-    for (int x = 0; x < 5; x++)
-    {
-        int suma = 0;
-        for (int y = 0; y < 5; y++)
-        {
-            suma = suma + (x == y ? 0 : matriz[x][y]);
-        }
-        if (maximo < suma)
-        {
-            maximo = suma;
-            indice_maximo = x;
-        }
-        
-    }
-    cout << maximo << endl;
-    cout << indice_maximo << endl;
-
-    for (int x = 1; x < 5; x++)
-    {
-
-        auto [s1, s2, score] = needlemanWunsch(secuencias[0], secuencias[x]);
-        cout << "s1: " << s1 << endl;
-        cout << "s2: " << s2 << endl;
-        cout << "====================" << endl;
-
-    }
+     
 }
+
+
 
 int main() {
 
@@ -184,27 +317,34 @@ int main() {
     secuencias[3]=s4;
     secuencias[4]=s5;
 
-    star(secuencias, 5);
+    star(secuencias, 5,0);
 
-    /* 
-    string bacteria, sarsCov, influenza;
-    procesarSecuencias("C:\\Users\\Admin\\Downloads\\Sequencias1.txt", bacteria, sarsCov, influenza);
+    string AF = "TGCCGGCAGGGATGTGCTTG";
+    string AR = "TGCTTGCAGTTTGCTTTCACTGATGGA";
+    string BF = "GTTTAGGTTTTTGCTTATGCAGCATCCA";
+    string BR = "TCAGGTACCCTGACCTTCTCTGAAC";
+    string CF = "GGAAAAGCACAGAACTGGCCAACA";
+    string CR = "GTGGGTTGTAAAGGTCCCAAATGGT";
+    string DF = "GCCAGTTGGTTGATTTCCACCTCCA";
+    string DR = "TGCCTTGGGTCCCTCTGACTGG";
+    string EF = "ACCCCCGACATGCAGAAGCTG";
+    string ER = "GTGGTGCATTGATGGAAGGAAGCA";
+    string FF = "TGACGTGTCTGCTCCACTTCCA";
+    string FR = "AGTGAGAGGAGCTCCCAGGGC";
 
-    // Imprimir las secuencias para verificar
-    cout << "Bacteria:\n" << bacteria << "\n\n";
-    cout << "Sars-Cov:\n" << sarsCov << "\n\n";
-    cout << "Influenza:\n" << influenza << endl;
+    string txt[12];
+    txt[0] = AF;
+    txt[1] = AR;
+    txt[2] = BF;
+    txt[3] = BR;
+    txt[4] = CF;
+    txt[5] = CR;
+    txt[6] = DF;
+    txt[7] = DR;
+    txt[8] = EF;
+    txt[9] = ER;
+    txt[10] = FF;
+    txt[11] = FR;
 
-    auto [align1, align2, score] = needlemanWunsch(sarsCov, influenza);
-
-    cout << endl;
-    cout << "Mejor alineamiento:\n";
-    cout << align1 << "\n";
-    cout << align2 << "\n";
-    cout << "Score: " << score << endl;
-    */
-
-
-
-    return 0;
+    star(txt, 12, 1);
 }
