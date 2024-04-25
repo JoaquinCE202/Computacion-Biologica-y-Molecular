@@ -4,11 +4,14 @@
 #include <cstdlib>
 
 using namespace std;
+
+//variables globales para el ensamblaje por fuerza bruta
 int minimo = 1000;
 vector<bool> inversos_finales;
 string consenso_final;
 int longitud_deseada = 55;
 
+//variables globales para el ensamblaje por camino hamiltoniano
 int minimo_hamilton = 1000;
 string consenso_final_hamilton;
 int t = 0;
@@ -17,6 +20,8 @@ vector<int> camino_final;
 vector<int> camino_final_acumulado;
 
 
+//funcion para encontrar el mayor overlap entre dos cadenas
+//devuelve el overlap
 int encontrar_mejor_overlap(const string& cadena1, const string& cadena2)
 {
     int max_overlap = 0;
@@ -24,6 +29,7 @@ int encontrar_mejor_overlap(const string& cadena1, const string& cadena2)
 
     for (int i = 1; i <= limite; i++)
     {
+        //vamos sacando caracteres del inicio y del fin hasta que estos sean iguales
         string inicio_overlap = cadena1.substr(cadena1.size() - i);
         string fin_overlap = cadena2.substr(0, i);
 
@@ -35,12 +41,17 @@ int encontrar_mejor_overlap(const string& cadena1, const string& cadena2)
     return max_overlap;
 }
 
+//DP para encontrar el consenso final
 void encontrar_cadena_consenso(string consenso, const vector<string>& cadenas, vector<bool>& usadas, vector<bool>& inversos, int usadas_count)
 {
+    //si llegamos al final, es decir, ya usamos todas las cadenas
     if (usadas_count == cadenas.size())
     {
         //cout << "Secuencia de consenso: " << consenso << endl;
         int n1 = (consenso.length() - longitud_deseada);
+
+        //vemos si el tamaño del nuevo consenso se acerca mas a nuestra longitud deseada
+        //actualizamos las variables globales
         if (abs(minimo- longitud_deseada) > abs(n1))
         {
             minimo = consenso.length();
@@ -52,14 +63,17 @@ void encontrar_cadena_consenso(string consenso, const vector<string>& cadenas, v
 
     for (int i = 0; i < cadenas.size(); ++i)
     {
+        //si no hemos usado ya esta cadena
         if (!usadas[i])
         {
+            //sacamos el overlap de la cadena directa
             int overlap = encontrar_mejor_overlap(consenso, cadenas[i]);
 
             string aux1, aux2;
             aux1 = cadenas[i];
             aux2 = cadenas[i];
 
+            //sacamos el complemento de la cadena
             for (int x = 0; x < aux1.length(); x++)
             {
                 if (aux2[aux2.length() -1 - x] == 'A')
@@ -83,13 +97,17 @@ void encontrar_cadena_consenso(string consenso, const vector<string>& cadenas, v
                     aux1[x] = aux2[aux2.length() - 1 - x];
                 }
             }
-
+            //sacamos el overlap del complemento
             int overlap2 = encontrar_mejor_overlap(consenso,aux1);
+            //marcamos como usada esa cadena
             usadas[i] = true;
+
+            //definimos que overlap es mejor y segun eso usamos la cadena invertida o directa
             if (overlap2 > overlap)
             {
                 inversos[i] = true;
                 encontrar_cadena_consenso(consenso + aux1.substr(overlap2), cadenas, usadas, inversos, usadas_count + 1);
+                //marcamos esa cadena como invertida
                 inversos[i] = false;
 
             }
@@ -98,17 +116,23 @@ void encontrar_cadena_consenso(string consenso, const vector<string>& cadenas, v
                encontrar_cadena_consenso(consenso + cadenas[i].substr(overlap), cadenas, usadas,inversos, usadas_count + 1);
 
             }
+            //descamracmos la cadena como usada para hacer backtracking
             usadas[i] = false; 
         }
     }
 }
 
+
+//funcion que recorre un grafo para sacar los caminos hamiltoniamos
 void recursion_hamilton(const vector<string>& cadenas, vector<bool>& usadas,int** caminos, int inicio,int cont, int n, string acumulado)
 {
+    //condicion de parada, si hemos pasado por todos los caminos
     if (cont == n)
     {
         //cout << acumulado.length();
 ;        int n1 = (acumulado.length() - longitud_deseada);
+
+        //vemos si se acerca mas a la longitud deseada
         if (abs(minimo_hamilton - longitud_deseada) > abs(n1))
         {
             minimo_hamilton = acumulado.length();
@@ -120,15 +144,21 @@ void recursion_hamilton(const vector<string>& cadenas, vector<bool>& usadas,int*
 
     for (int x = 0; x < n; x++)
     {
+        //si el camino es maor que nuestro parametro t, no lo hemos usado y no es el mismo nodo en el que estamos
         if (caminos[inicio][x] > t && inicio != x && usadas[x] == false)
         {
+            //aumentamos los caminos
             cont = cont + 1;
+            //acumulamos string y marcamos como usado
             string aux = acumulado;
             usadas[x] = true;
             acumulado = acumulado + cadenas[x].substr(caminos[inicio][x]);
             camino_final.push_back(x);
 
+            //volvemos a llamar a la funcion con el nuuevo nodo actual
             recursion_hamilton(cadenas,usadas,caminos, x, cont, n, acumulado);
+
+            //backtracking ... 
             cont = cont - 1;
             acumulado = aux;
             usadas[x] = false;
@@ -140,6 +170,8 @@ void recursion_hamilton(const vector<string>& cadenas, vector<bool>& usadas,int*
 
 void camino_hamiltonieano(int n, vector<string>& cadenas)
 {
+
+    //inicializamos los vectores y la matriz que va a representar el grafo
     vector<string>& cadenas_finales = cadenas;
     int** caminos;
     caminos = new int*[n];
@@ -159,6 +191,7 @@ void camino_hamiltonieano(int n, vector<string>& cadenas)
     }
     */
     int contador = 0;
+    //volvemos inversos a los que tengan marcados 1 en el vector de inversos
     for (vector<bool>::iterator it_inversos = inversos_finales.begin(); it_inversos != inversos_finales.end(); ++it_inversos)
     {
         if (*it_inversos == true)
@@ -191,6 +224,7 @@ void camino_hamiltonieano(int n, vector<string>& cadenas)
         contador++;
     }
 
+    //llenamos la matriz segun el overlap de un camino con otro
     for (int x = 0; x < n; x++)
     {
         for (int y = 0; y < n; y++)
@@ -202,6 +236,7 @@ void camino_hamiltonieano(int n, vector<string>& cadenas)
     vector<bool> usadas(cadenas.size(), false);
     string acumulado="";
 
+    //hacemos la recursion del camino hamiltoniano
     for (int x = 0; x < n; x++)
     {
         string aux = acumulado;
