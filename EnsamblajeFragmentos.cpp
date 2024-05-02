@@ -249,6 +249,59 @@ void camino_hamiltonieano(int n, vector<string>& cadenas)
         camino_final.pop_back();
     }
 
+    vector<int>::iterator it = camino_final_acumulado.begin();
+    int conteo_acumulado = 0;
+    int conteo_acumulado_gaps = 0;
+    for (int x = 0; x < cadenas_finales[*it].length(); x++)
+    {
+        cout << cadenas_finales[*it][x]<<" ";
+    }
+    
+    conteo_acumulado = conteo_acumulado + cadenas_finales[*it].length();
+
+    for (int x = 0; x < minimo_hamilton - cadenas_finales[*it].length(); x++)
+    {
+        cout << "- ";
+    }
+    cout << endl;
+
+    vector<int>::iterator aux = it;
+    int cont_aux = 0;
+    
+    //Imprimimos el proceso de ensamblaje de fragmentos
+    for (vector<int>::iterator it = camino_final_acumulado.begin() +1; it != camino_final_acumulado.end(); ++it)
+    {
+        for (int x = 0; x < cadenas_finales[*aux].length() - caminos[*aux][*it] + conteo_acumulado_gaps; x++)
+        {
+            cout << "- ";
+        }
+        conteo_acumulado_gaps = conteo_acumulado_gaps + cadenas_finales[*aux].length() - caminos[*aux][*it];
+        cont_aux = 0;
+        for (int y = 0; y < cadenas_finales[*it].length(); y++)
+        {
+            cout << cadenas_finales[*it][y] << " ";
+        }
+        conteo_acumulado = conteo_acumulado + (cadenas_finales[*it].length() - caminos[*aux][*it]);
+        for (int x = 0; x < minimo_hamilton - conteo_acumulado; x++)
+        {
+            cout << "- ";
+        }
+        cout << endl;
+        aux = it;
+    }
+
+    for (int x = 0; x < consenso_final_hamilton.length(); x++)
+    {
+        cout <<"- ";
+    }
+    cout << endl;
+
+    for (int x = 0; x < consenso_final_hamilton.length(); x++)
+    {
+        cout << consenso_final_hamilton[x]<<" ";
+    }
+    cout << endl;
+
     for (int x = 0; x < n; x++)
     {
         cout << x << " -> ";
